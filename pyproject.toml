@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "make4db-duckdb"
+authors = [
+    {name = "Paresh Adhia", email = "padhia+github@gmail.com"},
+]
+description = "DuckDB provider for make4db tool"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = [
+    "make4db-api",
+    "duckdb"
+]
+dynamic = ["version"]
+
+[tool.setuptools]
+py-modules = ["make4db_duckdb"]
+
+[tool.setuptools.dynamic]
+version = {attr = "make4db_duckdb.__version__"}
+
+[tool.ruff]
+target-version = "py312"
+line-length = 130
+lint.extend-select = ["I"]
+
+[tool.pytest.ini_options]
+pythonpath = [ "." ]
+filterwarnings = [ "ignore" ]
