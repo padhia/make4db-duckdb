@@ -1,18 +1,18 @@
-"DuckDB provider for make4db tool"
+"make4db provider for DuckDB"
 
 import logging
 from argparse import SUPPRESS, ArgumentParser
 from dataclasses import dataclass
 from functools import cache
 from os import environ
-from typing import Any, Iterable, Self, TextIO
+from typing import Any, Callable, Iterable, Self, TextIO
 
 from duckdb import DuckDBPyConnection as DBConn
 from duckdb import connect  # type: ignore
-from make4db.provider import DbAccess, DbProvider, Feature, PySqlFn, SchObj
+from make4db.provider import DDL, DbAccess, DbProvider, Feature, SchObj
 
 logger = logging.getLogger(__name__)
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 
 @dataclass
@@ -33,8 +33,12 @@ class DuckDbAcc(DbAccess):
         if self._conn is not None:
             self._conn.close()
 
-    def py2sql(self, fn: PySqlFn, object: str, replace: bool) -> Iterable[str]:
-        yield from fn(self.conn, object, replace)
+    def py2sql(self, fn: Callable[[Any, str, bool], DDL], object: str, replace: bool) -> Iterable[str]:
+        ddl = fn(self.conn, object, replace)
+        if isinstance(ddl, str):
+            yield ddl
+        else:
+            yield from ddl
 
     def execsql(self, sql: str, output: TextIO) -> None:
         with self.conn.cursor() as csr:
@@ -43,6 +47,16 @@ class DuckDbAcc(DbAccess):
 
     def iterdep(self, objs: Iterable[SchObj]) -> Iterable[tuple[SchObj, SchObj]]:
         raise NotImplementedError("DuckDB::iterdep() isn't implemented")
+
+    def drop_except(self, objs: set[SchObj]) -> Iterable[str]:
+        schemas = ",".join(f"'{s}'" for s in set(o.sch for o in objs))
+
+        with self.conn.cursor() as csr:
+            sql = f"select table_schema, table_name, table_type from information_schema.tables where table_schema in ({schemas})"
+            csr.execute(sql)
+            for o, t in ((SchObj.make(r[0], r[1]), "VIEW" if r[2] == "VIEW" else "TABLE") for r in csr.fetchall()):
+                if o not in objs:
+                    yield f"drop {t} {o}"
 
 
 @dataclass

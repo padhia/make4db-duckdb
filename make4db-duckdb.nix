@@ -7,7 +7,7 @@
 }:
 buildPythonPackage {
   pname     = "make4db-duckdb";
-  version   = "0.1.0";
+  version   = "0.1.2";
   pyproject = true;
   src       = ./.;
 
@@ -16,7 +16,7 @@ buildPythonPackage {
   doCheck               = false;
 
   meta = with lib; {
-    description = "DuckDB provider for make4db tool";
+    description = "make4db provider for DuckDB";
     maintainers = with maintainers; [ padhia ];
   };
 }
